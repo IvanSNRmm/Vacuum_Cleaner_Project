@@ -33,27 +33,35 @@ class Main_Window(QMainWindow):
         self.show()
     
     def Generate_frames(self):
-        # Crear un widget central
+        # Crear widget central
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
-        # Crear el layout principal
-        layout = QHBoxLayout(central_widget)
+        # Crear layout tipo cuadrícula
+        grid = QGridLayout()
 
-        # Frame 1
-        frame1 = QFrame()
-        frame1.setStyleSheet("background-color: blue;")
-        layout.addWidget(frame1)
+        # Frame columna izquierda (ocupa 3 filas)
+        frame_left = QFrame()
+        frame_left.setStyleSheet("background-color: #00FFFF;")
+        grid.addWidget(frame_left, 0, 0, 3, 1)  # row, col, rowSpan, colSpan
 
-        # Frame 2
-        frame2 = QFrame()
-        frame2.setStyleSheet("background-color: green;")
-        layout.addWidget(frame2)
+        # Frame columna derecha (ocupa 3 filas)
+        frame_right = QFrame()
+        frame_right.setStyleSheet("background-color: #8FEAFA;")
+        grid.addWidget(frame_right, 0, 1, 3, 1)
+
+        # --- Ajustar proporciones de columnas ---
+        grid.setColumnStretch(0, 1)  # columna izquierda
+        grid.setColumnStretch(1, 1)  # columna derecha
+
+        # --- Ajustar proporciones de filas ---
+        grid.setRowStretch(0, 1)
+        grid.setRowStretch(1, 1)
+        grid.setRowStretch(2, 1)
 
         # Asignar layout al widget central
-        central_widget.setLayout(layout)
-
-               
+        central_widget.setLayout(grid)
+                
 
 if  __name__ == '__main__':
     app = QApplication(sys.argv)
