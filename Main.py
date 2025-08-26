@@ -9,14 +9,17 @@ class OverlayWidget(QWidget):
         self.pixmap = pixmap
         self.img_x = 50
         self.img_y = 50
-        self.dx = 3
-        self.dy = 3
+        self.target_x = self.img_x
+        self.target_y = self.img_y
+        self.speed = 5  # pixeles por tick
         self.frames_width = 0
         self.frames_height = 0
+        self.frames_x = 0
+        self.frames_y = 0
 
-        # Timer para animación
+        # Timer de animación
         self.timer = QTimer()
-        self.timer.timeout.connect(self.move_image)
+        self.timer.timeout.connect(self.update_position)
         self.timer.start(30)
 
         # Fondo transparente y no bloquear eventos de los frames
@@ -24,37 +27,48 @@ class OverlayWidget(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.show()
 
-    def move_image(self):
-        # Límites basados en los frames reales
-        max_x = self.frames_width - self.pixmap.width()
-        max_y = self.frames_height - self.pixmap.height()
+    def move_to(self, x, y):
+        """Define la nueva posición objetivo dentro de los frames"""
+        self.target_x = max(0, min(x, self.frames_width - self.pixmap.width()))
+        self.target_y = max(0, min(y, self.frames_height - self.pixmap.height()))
 
-        if self.img_x >= max_x or self.img_x <= 0:
-            self.dx *= -1
-        if self.img_y >= max_y or self.img_y <= 0:
-            self.dy *= -1
+    def update_position(self):
+        # Movimiento gradual hacia la posición objetivo
+        if self.img_x < self.target_x:
+            self.img_x = min(self.img_x + self.speed, self.target_x)
+        elif self.img_x > self.target_x:
+            self.img_x = max(self.img_x - self.speed, self.target_x)
 
-        self.img_x += self.dx
-        self.img_y += self.dy
+        if self.img_y < self.target_y:
+            self.img_y = min(self.img_y + self.speed, self.target_y)
+        elif self.img_y > self.target_y:
+            self.img_y = max(self.img_y - self.speed, self.target_y)
+
         self.update()
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.drawPixmap(self.img_x, self.img_y, self.pixmap)
+        # Dibujar relativo a la posición de los frames
+        painter.drawPixmap(self.frames_x + self.img_x, self.frames_y + self.img_y, self.pixmap)
         painter.end()
 
-
+#Se crea una clase, de la POO
+#Se ocupa un entorno virtual por lo que cambiar el interpretador de python a env
+#Recuerde cargar las librerias del archivo Requerimientos.txt
 class MainWindow(QMainWindow):
+    #Generamos un constructor de la clase
     def __init__(self):
+        #Inicializamos el contructor, método inicializador de la clase padre QMainWindow
         super().__init__()
         self.setGeometry(100, 30, 1400, 830)
-        self.setWindowTitle("Frames con imagen animada")
+        self.setWindowTitle("Project Vaccum Cleaner")
         self.initUI()
         self.show()
 
     def initUI(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
+        self.setStyleSheet("background-color: #262626;") #Color de gris para la interfaz
 
         # Layout de 3 columnas x 3 filas
         grid = QGridLayout()
@@ -89,17 +103,27 @@ class MainWindow(QMainWindow):
         # Widget overlay para animar la imagen
         self.overlay = OverlayWidget(pixmap, parent=central_widget)
         self.overlay.show()
+        
+        # Ejemplo de mover la imagen a una posición después de 1 segundo
+        QTimer.singleShot(1000, lambda: self.overlay.move_to(200, 150))
+        QTimer.singleShot(3000, lambda: self.overlay.move_to(50, 250))
 
     def resizeEvent(self, event):
         # Overlay cubre todo el central_widget
         self.overlay.setGeometry(0, 0, self.centralWidget().width(), self.centralWidget().height())
 
-        # Actualizar límites de movimiento según frames
-        self.overlay.frames_width = self.frame_left.height() + self.frame_center.height()
-        self.overlay.frames_height = self.frame_left.width()
+        # Posición y tamaño combinado de los dos frames
+        frames_x = self.frame_left.x()
+        frames_y = self.frame_left.y()
+        frames_width = self.frame_left.width() + self.frame_center.width()
+        frames_height = self.frame_left.height()
+
+        self.overlay.frames_x = frames_x
+        self.overlay.frames_y = frames_y
+        self.overlay.frames_width = frames_width
+        self.overlay.frames_height = frames_height
 
         super().resizeEvent(event)
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
