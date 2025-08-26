@@ -1,71 +1,107 @@
 import sys
-from PyQt6.QtWidgets import *
-from PyQt6.QtGui import *
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QGridLayout, QFrame
+from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtGui import QPixmap, QPainter
 
-#Se crea una clase, de la POO
-#Se ocupa un entorno virtual por lo que cambiar el interpretador de python a Vir_env
-#Recuerde cargar las librerias del archivo Requerimientos.txt
+class OverlayWidget(QWidget):
+    def __init__(self, pixmap, parent=None):
+        super().__init__(parent)
+        self.pixmap = pixmap
+        self.img_x = 50
+        self.img_y = 50
+        self.dx = 3
+        self.dy = 3
+        self.frames_width = 0
+        self.frames_height = 0
 
-class Main_Window(QMainWindow):
-    #Generamos un cosntructor
-    #INGRESAR VALOR BAUD 115200
-    def __init__(self):
-    #Inicializamos el contructor, método inicializador de la clase padre QMainWindow
-        super().__init__()
-        self.Generate_Window()
-        
-    def Generate_Window(self):
-        self.setGeometry(200,25,1200,850) #Tamaño de la ventana y posición al generarse
-        self.setWindowTitle("Proyecto Rendimiento")
-        #self.setStyleSheet("""
-        #background: qlineargradient(
-        #        x1:0, y1:0,
-        #        x2:1, y2:0,
-        #        stop:0 blue,
-        #        stop:0.5 blue,
-        #        stop:0.5 green,
-        #        stop:1 green
-        #    );
-        #""")
-        
-        self.setStyleSheet("background-color: #262626;")#Color de gris para la interfaz
-        self.Generate_frames()
+        # Timer para animación
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.move_image)
+        self.timer.start(30)
+
+        # Fondo transparente y no bloquear eventos de los frames
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.show()
-    
-    def Generate_frames(self):
-        # Crear widget central
+
+    def move_image(self):
+        # Límites basados en los frames reales
+        max_x = self.frames_width - self.pixmap.width()
+        max_y = self.frames_height - self.pixmap.height()
+
+        if self.img_x >= max_x or self.img_x <= 0:
+            self.dx *= -1
+        if self.img_y >= max_y or self.img_y <= 0:
+            self.dy *= -1
+
+        self.img_x += self.dx
+        self.img_y += self.dy
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.drawPixmap(self.img_x, self.img_y, self.pixmap)
+        painter.end()
+
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setGeometry(100, 30, 1400, 830)
+        self.setWindowTitle("Frames con imagen animada")
+        self.initUI()
+        self.show()
+
+    def initUI(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
-        # Crear layout tipo cuadrícula
+        # Layout de 3 columnas x 3 filas
         grid = QGridLayout()
-
-        # Frame columna izquierda (ocupa 3 filas)
-        frame_left = QFrame()
-        frame_left.setStyleSheet("background-color: #00FFFF;")
-        grid.addWidget(frame_left, 0, 0, 3, 1)  # row, col, rowSpan, colSpan
-
-        # Frame columna derecha (ocupa 3 filas)
-        frame_right = QFrame()
-        frame_right.setStyleSheet("background-color: #8FEAFA;")
-        grid.addWidget(frame_right, 0, 1, 3, 1)
-
-        # --- Ajustar proporciones de columnas ---
-        grid.setColumnStretch(0, 1)  # columna izquierda
-        grid.setColumnStretch(1, 1)  # columna derecha
-
-        # --- Ajustar proporciones de filas ---
-        grid.setRowStretch(0, 1)
-        grid.setRowStretch(1, 1)
-        grid.setRowStretch(2, 1)
-
-        # Asignar layout al widget central
+        grid.setContentsMargins(0,0,0,0)
+        grid.setSpacing(0)
         central_widget.setLayout(grid)
-                
 
-if  __name__ == '__main__':
+        # Frames
+        self.frame_left = QFrame()
+        self.frame_left.setStyleSheet("background-color: #00FFFF;")
+        grid.addWidget(self.frame_left, 0, 0, 3, 1)
+
+        self.frame_center = QFrame()
+        self.frame_center.setStyleSheet("background-color: #8FEAFA;")
+        grid.addWidget(self.frame_center, 0, 1, 3, 1)
+
+        # Columna derecha vacía
+        grid.setColumnStretch(0,2)
+        grid.setColumnStretch(1,2)
+        grid.setColumnStretch(2,1)
+        grid.setRowStretch(0,1)
+        grid.setRowStretch(1,1)
+        grid.setRowStretch(2,1)
+
+        # Imagen PNG con transparencia
+        pixmap = QPixmap("Aspiradora_nofondo").scaled(
+            100, 100,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+
+        # Widget overlay para animar la imagen
+        self.overlay = OverlayWidget(pixmap, parent=central_widget)
+        self.overlay.show()
+
+    def resizeEvent(self, event):
+        # Overlay cubre todo el central_widget
+        self.overlay.setGeometry(0, 0, self.centralWidget().width(), self.centralWidget().height())
+
+        # Actualizar límites de movimiento según frames
+        self.overlay.frames_width = self.frame_left.height() + self.frame_center.height()
+        self.overlay.frames_height = self.frame_left.width()
+
+        super().resizeEvent(event)
+
+
+if __name__ == "__main__":
     app = QApplication(sys.argv)
-    Window = Main_Window()
+    window = MainWindow()
     sys.exit(app.exec())
-        
-        
